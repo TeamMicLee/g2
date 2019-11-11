@@ -1,7 +1,7 @@
 import * as _ from '@antv/util';
 import { COMPONENT_TYPE, DIRECTION, LAYER } from '../../constant';
-import { Circle as CircleAxis, Line as LineAxis, Scale } from '../../dependents';
-import { getAxisFactor, getAxisRegion, getAxisThemeCfg, getCircleAxisCenterRadius } from '../../util/axis';
+import { Line as LineAxis, Scale } from '../../dependents';
+import { getAxisFactor, getAxisRegion } from '../../util/axis';
 import { getName } from '../../util/scale';
 import { AxisOption, ComponentOption } from '../interface';
 import View from '../view';
@@ -20,67 +20,17 @@ function getAxisOption(axes: Record<string, AxisOption> | boolean, field: string
 }
 
 /**
- * generate line axis cfg
+ * get axis component cfg
  * @param view
- * @param scale
- * @param axisOption
+ * @param option
+ * @param baseAxisCfg
  * @param direction
- * @param layer
- * @return line axis cfg
+ * @returns get the total axis cfg
  */
-function getLineAxisCfg(view: View, scale: Scale, axisOption: AxisOption, direction: DIRECTION, layer: LAYER): object {
-  const container = view.getLayer(layer).addGroup();
+function getAxisCfg(view: View, option: AxisOption, baseAxisCfg: object, direction: DIRECTION): object {
+  const axisTheme = _.get(view.getTheme(), ['components', 'axis', direction], {});
 
-  const coordinate = view.getCoordinate();
-
-  const baseAxisCfg = {
-    container,
-    ...getAxisRegion(view.getCoordinate(), direction),
-    ticks: _.map(scale.getTicks(), (tick) => ({ name: tick.text, value: tick.value })),
-    title: {
-      text: getName(scale),
-    },
-    verticalFactor: getAxisFactor(coordinate, direction),
-  };
-
-  const axisThemeCfg = getAxisThemeCfg(view.getTheme(), direction);
-
-  // the cfg order should be ensure
-  return _.deepMix({}, baseAxisCfg, axisThemeCfg, axisOption);
-}
-
-/**
- * generate circle axis cfg
- * @param view
- * @param scale
- * @param axisOption
- * @param direction
- * @param layer
- * @return line axis cfg
- */
-function getCircleAxisCfg(
-  view: View,
-  scale: Scale,
-  axisOption: AxisOption,
-  direction: DIRECTION,
-  layer: LAYER
-): object {
-  const container = view.getLayer(layer).addGroup();
-
-  const baseAxisCfg = {
-    container,
-    ...getCircleAxisCenterRadius(view.getCoordinate()),
-    ticks: _.map(scale.getTicks(), (tick) => ({ name: tick.text, value: tick.value })),
-    title: {
-      text: getName(scale),
-    },
-    verticalFactor: 1,
-  };
-
-  const axisThemeCfg = getAxisThemeCfg(view.getTheme(), 'circle');
-
-  // the cfg order should be ensure
-  return _.deepMix({}, baseAxisCfg, axisThemeCfg, axisOption);
+  return _.deepMix({}, axisTheme, baseAxisCfg, option);
 }
 
 /**
@@ -91,92 +41,78 @@ function getCircleAxisCfg(
 function createXAxes(axes: Record<string, AxisOption> | boolean, view: View): ComponentOption[] {
   const axisArray: ComponentOption[] = [];
   // x axis
-  const scale = view.getXScale();
-  if (!scale) {
+  const xScale = view.getXScale();
+  if (!xScale) {
     return axisArray;
   }
 
-  const xAxisOption = getAxisOption(axes, scale.field);
+  const xAxisOption = getAxisOption(axes, xScale.field);
+
   if (xAxisOption !== false) {
     const direction = DIRECTION.BOTTOM;
     const layer = LAYER.BG;
 
-    const coordinate = view.getCoordinate();
+    const axisCfg = {
+      container: view.getLayer(layer).addGroup(),
+      ...getAxisRegion(view.getCoordinate(), direction),
+      ticks: _.map(xScale.getTicks(), (tick) => ({ name: tick.text, value: tick.value })),
+      title: {
+        text: getName(xScale),
+      },
+      verticalFactor: getAxisFactor(direction),
+    };
 
-    let C;
-    let cfg;
+    const component = new LineAxis(getAxisCfg(view, xAxisOption, axisCfg, direction));
 
-    if (coordinate.isRect) {
-      C = LineAxis;
-      cfg = getLineAxisCfg(view, scale, xAxisOption, direction, layer);
-    } else if (coordinate.isPolar) {
-      C = CircleAxis;
-      cfg = getCircleAxisCfg(view, scale, xAxisOption, direction, layer);
-    } else {
-      // helix and other, do not draw axis
-    }
+    component.render();
 
-    if (C) {
-      const component = new C(cfg);
-      component.render();
-
-      axisArray.push({
-        component,
-        layer,
-        direction,
-        type: COMPONENT_TYPE.AXIS,
-      });
-    }
+    axisArray.push({
+      // @ts-ignore
+      component,
+      layer,
+      direction,
+      type: COMPONENT_TYPE.AXIS,
+    });
   }
 
   return axisArray;
 }
 
-/**
- * create y axis
- * @param axes
- * @param view
- */
 function createYAxes(axes: Record<string, AxisOption> | boolean, view: View): ComponentOption[] {
   const axisArray: ComponentOption[] = [];
 
   // y axes
   const yScales = view.getYScales();
 
-  _.each(yScales, (scale: Scale, idx: number) => {
-    const yAxisOption = getAxisOption(axes, scale.field);
+  _.each(yScales, (yScale: Scale, idx: number) => {
+    const yAxisOption = getAxisOption(axes, yScale.field);
 
     if (yAxisOption !== false) {
       const layer = LAYER.BG;
       const direction = idx === 0 ? DIRECTION.LEFT : DIRECTION.RIGHT;
 
-      const coordinate = view.getCoordinate();
+      const axisCfg = {
+        container: view.getLayer(layer).addGroup(),
+        // 初始的位置大小方向，y 不同是垂直方向的
+        ...getAxisRegion(view.getCoordinate(), direction),
+        ticks: _.map(yScale.getTicks(), (tick) => ({ name: tick.text, value: tick.value })),
+        title: {
+          text: getName(yScale),
+        },
+      };
 
-      let C;
-      let cfg;
+      const component = new LineAxis(getAxisCfg(view, yAxisOption, axisCfg, direction));
 
-      if (coordinate.isRect) {
-        C = LineAxis;
-        cfg = getLineAxisCfg(view, scale, yAxisOption, direction, layer);
-      } else if (coordinate.isPolar) {
-        C = LineAxis;
+      component.render();
+
+      axisArray.push({
         // @ts-ignore
-        cfg = getLineAxisCfg(view, scale, yAxisOption, 'radius', layer);
-      } else {
-        // nothing
-      }
-
-      if (C) {
-        const component = new C(cfg);
-        component.render();
-
-        axisArray.push({
-          component,
-          layer,
-          direction,
-          type: COMPONENT_TYPE.AXIS,
-        });
-      }
+        component,
+        layer,
+        // 如果有两个，则是双轴图
+        direction,
+        type: COMPONENT_TYPE.AXIS,
+      });
     }
   });
 

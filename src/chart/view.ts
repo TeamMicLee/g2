@@ -162,8 +162,6 @@ export default class View extends EE {
    * 初始化
    */
   public init() {
-    // 计算画布的 viewBBox
-    this.calculateViewBBox();
     // 事件委托机制
     this.initEvents();
     this.initStates();
@@ -325,7 +323,7 @@ export default class View extends EE {
     }
 
     // 创建一个 coordinate 实例
-    this.createCoordinate(this.viewBBox);
+    this.createCoordinate();
 
     return this.coordinateInstance;
   }
@@ -584,23 +582,25 @@ export default class View extends EE {
    * 步骤非常繁琐，因为之间有一些数据依赖，所以执行流程上有先后关系
    */
   protected renderRecursive() {
-    // 1. 处理数据
+    // 1. 计算画布的 viewBBox
+    this.calculateViewBBox();
+    // 2. 处理数据
     this.filterData();
-    // 2. 创建 coordinate 实例
+    // 3. 创建 coordinate 实例
     if (!this.coordinateInstance) {
       this.createCoordinate();
     }
-    // 3. 初始化 Geometry
+    // 4. 初始化 Geometry
     this.initGeometries();
-    // 4. 渲染组件 component
+    // 5. 渲染组件 component
     this.renderComponents();
-    // 5.  递归 views，进行布局
+    // 6.  递归 views，进行布局
     this.doLayout();
-    // 6. 渲染分面
+    // 7. 渲染分面
     this.renderFacet();
-    // 7. 布局完之后，coordinate 的范围确定了，调整 coordinate 组件
+    // 8. 布局完之后，coordinate 的范围确定了，调整 coordinate 组件
     this.adjustCoordinate();
-    // 8. 渲染几何标记
+    // 9. 渲染几何标记
     this.paintGeometries();
 
     // 同样递归处理子 views
@@ -611,41 +611,6 @@ export default class View extends EE {
   // end Get 方法
 
   // 生命周期子流程——初始化流程
-
-  /**
-   * 计算 region，计算实际的像素范围坐标，去除 padding 之后的
-   * @private
-   */
-  private calculateViewBBox() {
-    // 存在 parent， 那么就是通过父容器大小计算
-    let width;
-    let height;
-    let start: Point;
-
-    if (this.parent) {
-      start = this.parent.coordinateBBox.tl;
-      width = this.parent.coordinateBBox.width;
-      height = this.parent.coordinateBBox.height;
-    } else {
-      // 顶层容器，从 canvas 中取值 宽高
-      width = this.canvas.get('width');
-      height = this.canvas.get('height');
-      start = { x: 0, y: 0 };
-    }
-
-    const region = this.region;
-
-    const [top, right, bottom, left] = this.padding;
-
-    // 计算 bbox 除去 padding 之后的
-    // 初始 coordinateBBox = viewBBox
-    this.viewBBox = this.coordinateBBox = new BBox(
-      start.x + width * region.start.x + left,
-      start.y + height * region.start.y + top,
-      width * (region.end.x - region.start.x) - left - right,
-      height * (region.end.y - region.start.y) - top - bottom
-    );
-  }
 
   /**
    * 初始化事件机制：G 4.0 底层内置支持 name:event 的机制，那么只要所有组件都有自己的 name 即可。
@@ -763,6 +728,41 @@ export default class View extends EE {
   };
 
   // view 生命周期 —— 渲染流程
+
+  /**
+   * 计算 region，计算实际的像素范围坐标，去除 padding 之后的
+   * @private
+   */
+  private calculateViewBBox() {
+    // 存在 parent， 那么就是通过父容器大小计算
+    let width;
+    let height;
+    let start: Point;
+
+    if (this.parent) {
+      start = this.parent.coordinateBBox.tl;
+      width = this.parent.coordinateBBox.width;
+      height = this.parent.coordinateBBox.height;
+    } else {
+      // 顶层容器，从 canvas 中取值 宽高
+      width = this.canvas.get('width');
+      height = this.canvas.get('height');
+      start = { x: 0, y: 0 };
+    }
+
+    const region = this.region;
+
+    const [top, right, bottom, left] = this.padding;
+
+    // 计算 bbox 除去 padding 之后的
+    // 初始 coordinateBBox = viewBBox
+    this.viewBBox = this.coordinateBBox = new BBox(
+      start.x + width * region.start.x + left,
+      start.y + height * region.start.y + top,
+      width * (region.end.x - region.start.x) - left - right,
+      height * (region.end.y - region.start.y) - top - bottom
+    );
+  }
 
   /**
    * 处理筛选器，筛选数据

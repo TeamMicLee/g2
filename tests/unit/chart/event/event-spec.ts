@@ -25,9 +25,6 @@ chart.animate(false);
 
 chart.render();
 
-// @ts-ignore
-window.__chart = chart;
-
 describe('Event', () => {
   it('component event', () => {
     // 等待联调

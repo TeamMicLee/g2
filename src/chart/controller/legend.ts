@@ -94,8 +94,6 @@ export function createLegends(legends: Record<string, LegendOption> | boolean, v
 
   const geometries = _.uniq(view.geometries);
 
-  const legendMap: Record<string, any> = {};
-
   _.each(geometries, (geometry: Geometry) => {
     const attributes = geometry.getLegendAttributes();
 
@@ -110,7 +108,7 @@ export function createLegends(legends: Record<string, LegendOption> | boolean, v
 
       // if the legend option is not false, means legend should be created.
       let legend;
-      if (legendOption !== false && !legendMap[scale.field]) {
+      if (legendOption !== false) {
         if (scale.isLinear) {
           // linear field, create continuous legend
           legend = createContinuousLegend();
@@ -121,7 +119,6 @@ export function createLegends(legends: Record<string, LegendOption> | boolean, v
       }
 
       if (legend) {
-        legendMap[scale.field] = legend;
         legendArray.push(legend);
       }
     });

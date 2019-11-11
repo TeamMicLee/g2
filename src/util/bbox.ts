@@ -1,7 +1,6 @@
 import * as _ from '@antv/util';
 import { DIRECTION } from '../constant';
-import { Padding, Point, Region } from '../interface';
-import { parsePadding } from './padding';
+import { Point, Region } from '../interface';
 
 export class BBox {
   public x: number;
@@ -156,24 +155,10 @@ export class BBox {
    * 收缩形成新的
    * @param gap
    */
-  public shrink(gap: Padding): BBox {
-    const [top, right, bottom, left] = parsePadding(gap);
+  public shrink(gap: number[]): BBox {
+    const [top, right, bottom, left] = gap;
 
     return new BBox(this.x + left, this.y + top, this.width - left - right, this.height - top - bottom);
-  }
-
-  /**
-   * get the gap of two bbox, if not exceed, then 0
-   * @param bbox
-   * @returns [top, right, bottom, left]
-   */
-  public exceed(bbox: BBox): number[] {
-    return [
-      Math.max(-this.minY + bbox.minY, 0),
-      Math.max(this.maxX - bbox.maxX, 0),
-      Math.max(this.maxY - bbox.maxY, 0),
-      Math.max(-this.minX + bbox.minX, 0),
-    ];
   }
 
   /**
